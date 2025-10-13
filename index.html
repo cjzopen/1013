@@ -23,80 +23,104 @@
   <meta name="twitter:description" content="描述">
   <meta name="twitter:image" content="https://yourwebsite.com/images/og-image.jpg">
 
-  <link rel="stylesheet" href="styles.css">
+  <!-- Bootstrap 5 CSS (CDN) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Local overrides -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <h2>各國關稅與毛利（四象限）</h2>
   <p class="meta">輸入料號、產地、成本、銷售價、銷售金額 → 自動計算原毛利與關稅後毛利，並依平均值分象限。</p>
-
   <div class="container">
-    <!-- 表單 + 列表 -->
-    <div>
-      <div class="card">
-        <h3 style="margin:0 0 8px 0">新增品項</h3>
+    <div class="row">
+      <!-- 主欄：表單與資料列表 -->
+      <main class="col-lg-8">
+        <div class="card mb-3">
+          <div class="card-body">
+            <h3 class="h5 mb-2">新增品項</h3>
 
-        <label>料件編號</label>
-        <input id="partInput" placeholder="例：F056210">
+            <div class="mb-2">
+              <label class="form-label">料件編號</label>
+              <input id="partInput" class="form-control" placeholder="例：F056210">
+            </div>
 
-        <label>產地（選擇會自動帶入關稅）</label>
-        <select id="originInput"></select>
+            <div class="mb-2">
+              <label class="form-label">產地（選擇會自動帶入關稅）</label>
+              <select id="originInput" class="form-select"></select>
+            </div>
 
-        <div class="row">
-          <div>
-            <label>成本價（本幣）</label>
-            <input id="costInput" type="number" step="0.01" />
-          </div>
-          <div>
-            <label>銷售價（本幣）</label>
-            <input id="priceInput" type="number" step="0.01" />
+            <div class="row g-2">
+              <div class="col">
+                <label class="form-label">成本價（本幣）</label>
+                <input id="costInput" class="form-control" type="number" step="0.01" />
+              </div>
+              <div class="col">
+                <label class="form-label">銷售價（本幣）</label>
+                <input id="priceInput" class="form-control" type="number" step="0.01" />
+              </div>
+            </div>
+
+            <div class="mb-2 mt-2">
+              <label class="form-label">銷售金額（該料件的銷售額）</label>
+              <input id="amountInput" class="form-control" type="number" step="0.01" />
+            </div>
+
+            <div class="row g-2 align-items-end mt-2">
+              <div class="col">
+                <label class="form-label">關稅（%）</label>
+                <input id="tariffInput" class="form-control" type="number" step="0.01" />
+              </div>
+              <div class="col-auto">
+                <button id="btnAdd" class="btn btn-primary">新增</button>
+                <button id="btnClear" class="btn btn-secondary ms-2">清空</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <label>銷售金額（該料件的銷售額）</label>
-        <input id="amountInput" type="number" step="0.01" />
-
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label>關稅（%）</label>
-            <input id="tariffInput" type="number" step="0.01" />
+        <div class="card mb-3">
+          <div class="card-body">
+            <h3 class="h5 mb-2">資料列表</h3>
+            <div id="list" class="list"></div>
           </div>
-          <div style="align-self:end;">
-            <button id="btnAdd" class="btn-primary">新增</button>
-            <button id="btnClear">清空</button>
+        </div>
+      </main>
+
+      <!-- 側欄：國家關稅與統計 -->
+      <aside class="col-lg-4">
+        <div class="card mb-3">
+          <div class="card-body">
+            <h3 class="h5 mb-2">國家預設關稅（可編輯）</h3>
+            <div id="countryEditor" class="d-flex flex-column gap-2"></div>
+            <div class="mt-2 small text-muted">可按 + 新增國家，也可在右側刪除。</div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-body">
+            <h3 class="h5 mb-2">象限統計</h3>
+            <div class="meta">Q1（高銷售、高毛利）: <span id="q1">0</span></div>
+            <div class="meta">Q2（低銷售、高毛利）: <span id="q2">0</span></div>
+            <div class="meta">Q3（低銷售、低毛利）: <span id="q3">0</span></div>
+            <div class="meta">Q4（高銷售、低毛利）: <span id="q4">0</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 圖表區（整行） -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card mb-3">
+          <div class="card-body p-0">
+            <canvas id="chartCanvas" width="900" height="520"></canvas>
           </div>
         </div>
       </div>
-
-      <div class="card" style="margin-top:12px;">
-        <h3 style="margin:0 0 8px 0">資料列表</h3>
-        <div id="list" class="list"></div>
-      </div>
     </div>
 
-    <!-- 右側統計 -->
-    <aside>
-      <div class="card">
-        <h3 style="margin:0 0 8px 0">國家預設關稅（可編輯）</h3>
-        <div id="countryEditor" style="display:flex;flex-direction:column;gap:8px"></div>
-        <div style="margin-top:8px;font-size:13px;color:#666">可按 + 新增國家，也可在右側刪除。</div>
-      </div>
-
-      <div class="card" style="margin-top:12px;">
-        <h3 style="margin:0 0 8px 0">象限統計</h3>
-        <div class="meta">Q1（高銷售、高毛利）: <span id="q1">0</span></div>
-        <div class="meta">Q2（低銷售、高毛利）: <span id="q2">0</span></div>
-        <div class="meta">Q3（低銷售、低毛利）: <span id="q3">0</span></div>
-        <div class="meta">Q4（高銷售、低毛利）: <span id="q4">0</span></div>
-      </div>
-    </aside>
-
-    <!-- 圖表 -->
-    <div class="card" style="grid-column:1 / -1">
-      <canvas id="chartCanvas" width="900" height="520"></canvas>
-    </div>
-
-    <footer>說明：原毛利 = (售價 - 成本) / 售價 ×100；關稅後成本 = 成本 × (1 + 關稅%)；關稅後毛利以關稅後成本計算。</footer>
+    <footer class="pt-2">說明：原毛利 = (售價 - 成本) / 售價 ×100；關稅後成本 = 成本 × (1 + 關稅%)；關稅後毛利以關稅後成本計算。</footer>
   </div>
 <script src="script.js"></script>
 </body>
