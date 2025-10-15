@@ -1,4 +1,5 @@
-const tariffRates = {
+// 從 localStorage 讀取或使用預設值
+const tariffRates = JSON.parse(localStorage.getItem('tariffRates')) || {
       '柬埔寨': 19,
       '泰國': 19,
       '臺灣': 20,
@@ -6,9 +7,13 @@ const tariffRates = {
       '中國': 30
     };
 
+    // 儲存關稅資料到 localStorage
+    function saveTariffRates() {
+      localStorage.setItem('tariffRates', JSON.stringify(tariffRates));
+    }
+
     // DOM
     const originInput = document.getElementById('originInput');
-    const tariffInput = document.getElementById('tariffInput');
     const partInput = document.getElementById('partInput');
     const costInput = document.getElementById('costInput');
     const priceInput = document.getElementById('priceInput');
@@ -16,12 +21,22 @@ const tariffRates = {
     const btnAdd = document.getElementById('btnAdd');
     const btnClear = document.getElementById('btnClear');
     const listEl = document.getElementById('list');
-    const countryEditor = document.getElementById('countryEditor');
+    // const countryEditor = document.getElementById('countryEditor');
+    const newCountryForm = document.getElementById('newCountryForm');
+    const newCountryName = document.getElementById('newCountryName');
+    const newCountryTariff = document.getElementById('newCountryTariff');
+    const btnAddCountry = document.getElementById('btnAddCountry');
 
     // 將預設國家載入下拉與右側編輯區
     function renderCountryUI() {
       originInput.innerHTML = '';
-      countryEditor.innerHTML = '';
+      // countryEditor.innerHTML = '';
+
+      // 先加入新增國家的選項
+      const emptyOpt = document.createElement('option');
+      emptyOpt.value = '';
+      emptyOpt.textContent = '-- 新增國家 --';
+      originInput.appendChild(emptyOpt);
 
       Object.keys(tariffRates).forEach((c) => {
         const opt = document.createElement('option');
@@ -30,71 +45,74 @@ const tariffRates = {
         originInput.appendChild(opt);
 
         // 右側編輯列
-        const row = document.createElement('div');
-        row.style.display = 'flex';
-        row.style.gap = '8px';
-        row.style.alignItems = 'center';
+        // const row = document.createElement('div');
+        // row.style.display = 'flex';
+        // row.style.gap = '8px';
+        // row.style.alignItems = 'center';
 
-        const name = document.createElement('div');
-        name.style.flex = '1';
-        name.innerHTML = `<div style="font-weight:600">${c}</div><div class="meta">關稅 ${tariffRates[c]}%</div>`;
+        // const name = document.createElement('div');
+        // name.style.flex = '1';
+        // name.innerHTML = `<div style="font-weight:600">${c}</div><div class="meta">關稅 ${tariffRates[c]}%</div>`;
 
-        const btnDel = document.createElement('button');
-        btnDel.textContent = '刪除';
-        btnDel.onclick = () => {
-          delete tariffRates[c];
-          renderCountryUI();
-        };
+        // const btnDel = document.createElement('button');
+        // btnDel.textContent = '刪除';
+        // btnDel.onclick = () => {
+        //   delete tariffRates[c];
+        //   renderCountryUI();
+        // };
 
-        row.appendChild(name);
-        row.appendChild(btnDel);
-        countryEditor.appendChild(row);
+        // row.appendChild(name);
+        // row.appendChild(btnDel);
+        // countryEditor.appendChild(row);
       });
 
-      // 當選擇國家改變，自動帶出關稅
+      // 處理新增國家表單的顯示/隱藏
       originInput.onchange = () => {
-        const v = originInput.value;
-        tariffInput.value = tariffRates[v] ?? 0;
+        const showNewCountryForm = originInput.value === '';
+        newCountryForm.style.display = showNewCountryForm ? 'block' : 'none';
+        if (showNewCountryForm) {
+          newCountryName.focus();
+        }
       };
+
       // 預設帶入第一筆
-      if (originInput.options.length) {
-        originInput.selectedIndex = 0;
-        originInput.onchange();
+      if (originInput.options.length > 1) { // 因為有空白選項，所以要 > 1
+        originInput.selectedIndex = 1;
       }
     }
 
     // 新增國家UI
-    (function buildAddCountryControls() {
-      const wrapper = document.createElement('div');
-      wrapper.style.display = 'flex';
-      wrapper.style.gap = '8px';
-      wrapper.style.marginTop = '8px';
+    // (function buildAddCountryControls() {
+      // const wrapper = document.createElement('div');
+      // wrapper.style.display = 'flex';
+      // wrapper.style.gap = '8px';
+      // wrapper.style.marginTop = '8px';
 
-      const name = document.createElement('input');
-      name.placeholder = '國家名稱';
-      name.style.flex = '1';
+      // const name = document.createElement('input');
+      // name.placeholder = '國家名稱';
+      // name.style.flex = '1';
 
-      const rate = document.createElement('input');
-      rate.type = 'number';
-      rate.placeholder = '關稅%';
-      rate.style.width = '90px';
+      // const rate = document.createElement('input');
+      // rate.type = 'number';
+      // rate.placeholder = '關稅%';
+      // rate.style.width = '90px';
 
-      const btn = document.createElement('button');
-      btn.textContent = '+';
-      btn.onclick = () => {
-        const n = name.value.trim();
-        const r = Number(rate.value) || 0;
-        if (!n) return alert('請輸入國家名稱');
-        tariffRates[n] = r;
-        name.value = ''; rate.value = '';
-        renderCountryUI();
-      };
+    //   const btn = document.createElement('button');
+    //   btn.textContent = '+';
+    //   btn.onclick = () => {
+    //     const n = name.value.trim();
+    //     const r = Number(rate.value) || 0;
+    //     if (!n) return alert('請輸入國家名稱');
+    //     tariffRates[n] = r;
+    //     name.value = ''; rate.value = '';
+    //     renderCountryUI();
+    //   };
 
-      wrapper.appendChild(name);
-      wrapper.appendChild(rate);
-      wrapper.appendChild(btn);
-      countryEditor.appendChild(wrapper);
-    })();
+    //   wrapper.appendChild(name);
+    //   wrapper.appendChild(rate);
+    //   wrapper.appendChild(btn);
+    //   countryEditor.appendChild(wrapper);
+    // })();
 
     renderCountryUI();
 
@@ -141,11 +159,45 @@ const tariffRates = {
     // 新增一筆資料（按鈕）
     btnAdd.onclick = () => {
       const part = partInput.value.trim();
-      const origin = originInput.value;
+      let origin = originInput.value;
       const cost = Number(costInput.value);
       const price = Number(priceInput.value);
       const amount = Number(amountInput.value);
-      const tariff = Number(tariffInput.value);
+      
+      // 如果選擇新增國家，先處理新國家的新增
+      if (origin === '') {
+        const newName = newCountryName.value.trim();
+        const newTariff = parseFloat(newCountryTariff.value);
+
+        if (!newName) {
+          alert('請輸入國家名稱');
+          return;
+        }
+        if (isNaN(newTariff)) {
+          alert('請輸入有效的關稅率');
+          return;
+        }
+        if (tariffRates[newName] !== undefined) {
+          alert('此國家已存在');
+          return;
+        }
+
+        // 新增國家到 tariffRates
+        tariffRates[newName] = newTariff;
+        saveTariffRates();
+        renderCountryUI();
+        
+        // 設定為目前選擇的國家
+        origin = newName;
+        originInput.value = newName;
+        
+        // 重置新增國家表單
+        newCountryName.value = '';
+        newCountryTariff.value = '';
+        newCountryForm.style.display = 'none';
+      }
+      
+      const tariff = tariffRates[origin] ?? 0;
 
       if (!part) return alert('請輸入料件編號');
       if (!origin) return alert('請選擇產地');
@@ -179,12 +231,6 @@ const tariffRates = {
       if (!confirm('確定要清空所有資料？')) return;
       items = [];
       updateAll();
-    };
-
-    // origin 改變會自動帶入關稅
-    originInput.onchange = () => {
-      const v = originInput.value;
-      tariffInput.value = tariffRates[v] ?? 0;
     };
 
     // 更新圖表、列表、統計

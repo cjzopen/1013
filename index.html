@@ -47,7 +47,23 @@
 
             <div class="mb-2">
               <label class="form-label">產地（選擇會自動帶入關稅）</label>
-              <select id="originInput" class="form-select"></select>
+              <select id="originInput" class="form-select">
+                <option value="">-- 新增國家 --</option>
+              </select>
+            </div>
+
+            <!-- 新增國家表單（預設隱藏） -->
+            <div id="newCountryForm" class="mb-3" style="display: none;">
+              <div class="row g-2">
+                <div class="col">
+                  <label class="form-label">國家名稱</label>
+                  <input type="text" id="newCountryName" class="form-control" placeholder="輸入新國家名稱">
+                </div>
+                <div class="col">
+                  <label class="form-label">預設關稅 (%)</label>
+                  <input type="number" id="newCountryTariff" class="form-control" step="0.1" placeholder="輸入關稅率">
+                </div>
+              </div>
             </div>
 
             <div class="row g-2">
@@ -67,10 +83,6 @@
             </div>
 
             <div class="row g-2 align-items-end mt-2">
-              <div class="col">
-                <label class="form-label">關稅（%）</label>
-                <input id="tariffInput" class="form-control" type="number" step="0.01" />
-              </div>
               <div class="col-auto">
                 <button id="btnAdd" class="btn btn-primary">新增</button>
                 <button id="btnClear" class="btn btn-secondary ms-2">清空</button>
@@ -87,16 +99,9 @@
         </div>
       </main>
 
-      <!-- 側欄：國家關稅與統計 -->
+      <!-- 側欄：象限統計 -->
       <aside class="col-lg-4">
-        <div class="card mb-3">
-          <div class="card-body">
-            <h3 class="h5 mb-2">國家預設關稅（可編輯）</h3>
-            <div id="countryEditor" class="d-flex flex-column gap-2"></div>
-            <div class="mt-2 small text-muted">可按 + 新增國家，也可在右側刪除。</div>
-          </div>
-        </div>
-
+        <div id="countryEditor"></div>
         <div class="card mb-3">
           <div class="card-body">
             <h3 class="h5 mb-2">象限統計</h3>
