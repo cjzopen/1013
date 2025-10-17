@@ -23,49 +23,61 @@
   <meta name="twitter:description" content="描述">
   <meta name="twitter:image" content="https://yourwebsite.com/images/og-image.jpg">
 
-  <!-- Bootstrap 5 CSS (CDN) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Local overrides -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12.0.2/swiper-bundle.min.css">
+  <link rel="stylesheet" href="https://www.digiwin.com/tw/css/solution/WB003954/tariff-calculating.css">
 </head>
 <body>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<h2>各國關稅與毛利（四象限）</h2>
-  <p class="meta">輸入料號、產地、成本、銷售價、銷售金額 → 自動計算原毛利與關稅後毛利，並依平均值分象限。</p>
-  <div class="container">
-    <div class="row">
-      <!-- 主欄：表單與資料列表 -->
-      <main class="col-lg-8">
-        <div class="card mb-3">
+<main id="tariff-chart">
+  <div id="tariff-header" class="pt-5 pt-lg-0 pb-5">
+    <div class="container g-0">
+      <div class="row align-items-center">
+        <div class="col-12 col-lg-7">
+          <h1 class="text-green">產品獲利計算機</h1>
+          <p class="fw-bold h4 mb-5">即時試算匯率與關稅影響，掌握產品真實利潤</p>
+          <p>進口？出口？利潤被關稅吃掉怎麼辦？<br>三分鐘算出產品利潤空間，找到最有利的市場組合</p>
+        </div>
+        <div class="col-12 col-lg-5 d-flex align-items-center d-none d-lg-block">
+          <img src="https://www.digiwin.com/tw/images/solution/wb003954/hero.webp" alt="產品獲利計算機" class="img-fluid" width="500" height="435">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container text-center pt-5 pb-5 mb-5">
+    <div class="row justify-content-center">
+      <a href="#calculating" class="col-12 col-lg-10 btn bg-orange text-white py-3">立即試算 ↓</a>
+    </div>
+  </div>
+  <div class="container bg-green pt-5 pb-5 rounded-5" id="calculator-section">
+    <h2 class="text-center text-white mb-5 pb-4" id="calculating">產品獲利計算機</h2>
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-8">
+        <div class="card rounded-5 mb-5">
           <div class="card-body">
-            <h3 class="h5 mb-2">新增品項</h3>
-
+            <h3 class="text-orange text-center mb-3">產品資訊</h3>
             <div class="mb-2">
               <label class="form-label">料件編號</label>
               <input id="partInput" class="form-control" placeholder="例：F056210">
             </div>
-
             <div class="mb-2">
-              <label class="form-label">產地（選擇會自動帶入關稅）</label>
-              <select id="originInput" class="form-select">
-                <option value="">-- 新增國家 --</option>
-              </select>
+              <label class="form-label">產地</label>
+              <div id="originInput" class="d-flex flex-wrap" role="group" aria-label="產地按鈕群">
+                <!-- 由 JS 產生按鈕 -->
+              </div>
             </div>
-
-            <!-- 新增國家表單（預設隱藏） -->
-            <div id="newCountryForm" class="mb-3" style="display: none;">
+            <div id="newCountryForm" class="mb-3">
               <div class="row g-2">
                 <div class="col">
-                  <label class="form-label">國家名稱</label>
-                  <input type="text" id="newCountryName" class="form-control" placeholder="輸入新國家名稱">
+                  <label class="form-label">其他 (請自行輸入國家與關稅)</label>
+                  <input type="text" id="newCountryName" class="form-control" placeholder="請輸入新國家名稱">
                 </div>
                 <div class="col">
-                  <label class="form-label">預設關稅 (%)</label>
-                  <input type="number" id="newCountryTariff" class="form-control" step="0.1" placeholder="輸入關稅率">
+                  <label class="form-label">關稅 (%)</label>
+                  <input type="number" id="newCountryTariff" class="form-control" step="0.1" placeholder="請輸入新國家關稅率">
                 </div>
               </div>
             </div>
-
             <div class="row g-2">
               <div class="col">
                 <label class="form-label">成本價（本幣）</label>
@@ -76,57 +88,141 @@
                 <input id="priceInput" class="form-control" type="number" step="0.01" />
               </div>
             </div>
-
             <div class="mb-2 mt-2">
               <label class="form-label">銷售金額（該料件的銷售額）</label>
               <input id="amountInput" class="form-control" type="number" step="0.01" />
             </div>
-
-            <div class="row g-2 align-items-end mt-2">
-              <div class="col-auto">
-                <button id="btnAdd" class="btn btn-primary">新增</button>
-                <button id="btnClear" class="btn btn-secondary ms-2">清空</button>
-              </div>
+            <div class="mt-4">
+              <button id="btnAdd" class="w-100 btn bg-orange text-white py-3">新增</button>
             </div>
           </div>
         </div>
 
-        <div class="card mb-3">
+        <div class="card rounded-5 mb-5">
           <div class="card-body">
-            <h3 class="h5 mb-2">資料列表</h3>
+            <h3 class="text-orange text-center mb-3">資料列表</h3>
             <div id="list" class="list"></div>
           </div>
         </div>
-      </main>
-
-      <!-- 側欄：象限統計 -->
-      <aside class="col-lg-4">
-        <div id="countryEditor"></div>
-        <div class="card mb-3">
-          <div class="card-body">
-            <h3 class="h5 mb-2">象限統計</h3>
-            <div class="meta">Q1（高銷售、高毛利）: <span id="q1">0</span></div>
-            <div class="meta">Q2（低銷售、高毛利）: <span id="q2">0</span></div>
-            <div class="meta">Q3（低銷售、低毛利）: <span id="q3">0</span></div>
-            <div class="meta">Q4（高銷售、低毛利）: <span id="q4">0</span></div>
-          </div>
-        </div>
-      </aside>
-    </div>
-
-    <!-- 圖表區（整行） -->
-    <div class="row">
-      <div class="col-12">
-        <div class="card mb-3">
-          <div class="card-body p-0">
-            <canvas id="chartCanvas" width="900" height="520"></canvas>
-          </div>
+        <div>
+          <button id="btnStart" class="w-100 btn bg-orange text-white mb-3 py-3">開始計算</button>
+          <button id="btnClear" class="w-100 btn bg-gray text-white mb-3 py-3">回復預設</button>
         </div>
       </div>
     </div>
-
-    <footer class="pt-2">說明：原毛利 = (售價 - 成本) / 售價 ×100；關稅後成本 = 成本 × (1 + 關稅%)；關稅後毛利以關稅後成本計算。</footer>
+    <div id="chartRow" class="row d-none pt-5">
+      <div class="col-12 col-lg-8 mx-auto text-center pt-5">
+        <h3 id="the-result" class="text-white underline mb-5">象限統計</h3>
+        <div class="card rounded-5 mb-5">
+          <div class="card-body d-flex flex-wrap justify-content-around">
+            <div class="meta col-12 col-md-5">Q1（高銷售、高毛利）: <span id="q1">0</span></div>
+            <div class="meta col-12 col-md-5">Q2（低銷售、高毛利）: <span id="q2">0</span></div>
+            <div class="meta col-12 col-md-5">Q3（低銷售、低毛利）: <span id="q3">0</span></div>
+            <div class="meta col-12 col-md-5">Q4（高銷售、低毛利）: <span id="q4">0</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-8 text-center mx-auto pt-4">
+        <h3 class="text-white underline mb-5">計算結果</h3>
+        <div class="card rounded-5 p-0" style="border:1rem solid var(--orange)">
+          <canvas id="chartCanvas" width="900" height="520" class="rounded-5"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="text-center text-white mb-4 mt-3">
+      <small>說明：原毛利 = (售價 - 成本) / 售價 ×100；關稅後成本 = 成本 × (1 + 關稅%)；關稅後毛利以關稅後成本計算。</small>
+    </div>
   </div>
-<script src="script.js"></script>
+  <button id="pointPopoverToggle" popovertarget="pointPopover">toggle popup</button>
+<div id="pointPopover" popover class="rounded-5" style="background-color: #FEE867;">
+  <img id="nana-img" src="https://www.digiwin.com/tw/images/solution/wb003954/nana.webp" alt="*" width="95" height="95" loading="lazy" decoding="async">
+  <div class="text-end">
+    <button id="pointPopoverInsideToggle" popovertarget="pointPopover" class="d-inline-flex align-items-center justify-content-center fw-bold border-0">
+      <span>&times;</span>
+    </button>
+  </div>
+  <div class="card rounded-5 border-0">
+    <div id="pointPopoverContent">數據說明</div>
+  </div>
+</div>
+<div id="the-more" class="pb-5">
+  <div class="container py-5">
+    <h2 class="text-center mb-5">更多相關資訊</h2>
+    <div class="row justify-content-center gap-3 mb-5 pb-4">
+      <button id="ai-example-button" class="col-12 col-md-3 btn mx-2 bg-orange text-white">稅率決策AI模擬說明</button>
+      <button id="report-download-button" class="col-12 col-md-3 btn mx-2 bg-green text-white">關稅市調報告書下載</button>
+    </div>
+    <div id="ai-example">
+      <h3 class="text-center text-green mb-4" style="font-size:clamp(24px,4vw,48px);">AI模擬應用情境展示</h3>
+      <div class="swiper text-center" id="exmaple-swiper" role="region" aria-label="AI 模擬輪播">
+        <div class="swiper-wrapper">
+          <div class="swiper-slide">
+            <div class="text-center mb-3">
+              <div class="h4 d-inline-block mx-auto text-center px-4 border-bottom border-4 border-dark py-2">一、關稅時事現況分析</div>
+            </div>
+            <p class="mb-5">整合產品資料數據與時事關稅政策趨勢，即時掌握產品受關稅衝擊全貌，AI自動生成專業診斷與改善建議，協助企業洞悉風險、強化決策依據</p>
+            <img src="https://www.digiwin.com/tw/images/solution/wb003954/ai-1.webp" width="1900" height="893" loading="lazy" decoding="async" alt="關稅時事現況分析" class="img-fluid rounded-3 mt-3">
+          </div>
+          <div class="swiper-slide">
+            <div class="text-center mb-3">
+              <div class="h4 d-inline-block mx-auto text-center px-4 border-bottom border-4 border-dark py-2">二、匯率與市場變動預判</div>
+            </div>
+            <p class="mb-5">模擬匯率升值對於跨國供應鏈等多重市場變因，利用AI預測營收與毛利波動，提前布局最佳匯率因應策略。</p>
+            <img src="https://www.digiwin.com/tw/images/solution/wb003954/ai-2.webp" width="1900" height="900" loading="lazy" decoding="async" alt="匯率與市場變動預判" class="img-fluid rounded-3 mt-3">
+          </div>
+          <div class="swiper-slide">
+            <div class="text-center mb-3">
+              <div class="h4 d-inline-block mx-auto text-center px-4 border-bottom border-4 border-dark py-2">三、產品組合優化模擬</div>
+            </div>
+            <p class="mb-5">以圖像化落點解析產品競爭力，快速易看供應鏈中的關鍵產品數據，找出最佳產品組合的模擬情境。</p>
+            <img src="https://www.digiwin.com/tw/images/solution/wb003954/ai-3.webp" width="1900" height="893" loading="lazy" decoding="async" alt="產品組合優化模擬" class="img-fluid rounded-3 mt-3">
+          </div>
+          <div class="swiper-slide">
+            <div class="text-center mb-3">
+              <div class="h4 d-inline-block mx-auto text-center px-4 border-bottom border-4 border-dark py-2">四、價格策略與客戶轉嫁模擬</div>
+            </div>
+            <p class="mb-5">AI迅速且安全整合成本、匯率、訂單等客戶端敏感數據，協助業主快速預判利潤變化與風險應對。</p>
+            <img src="https://www.digiwin.com/tw/images/solution/wb003954/ai-4.webp" width="1900" height="897" loading="lazy" decoding="async" alt="價格策略與客戶轉嫁模擬" class="img-fluid rounded-3 mt-3">
+          </div>
+          <div class="swiper-slide">
+            <div class="text-center mb-3">
+              <div class="h4 d-inline-block mx-auto text-center px-4 border-bottom border-4 border-dark py-2">五、生產基地移轉模擬</div>
+            </div>
+            <p class="mb-5">及時比較各國成本與關稅負擔，推薦最具生產基地，為企業管理者提供跨國高效製程與利潤管理的客製方案。</p>
+            <img src="https://www.digiwin.com/tw/images/solution/wb003954/ai-5.webp" width="1894" height="895" loading="lazy" decoding="async" alt="生產基地移轉模擬" class="img-fluid rounded-3 mt-3">
+          </div>
+        </div>
+        <div class="swiper-button-prev" aria-hidden="true"></div>
+        <div class="swiper-button-next" aria-hidden="true"></div>
+      </div>
+      <!-- pagination (thumbnails) placed below swiper to avoid overlap -->
+      <div id="swiperThumbs" class="swiper-pagination mt-3 d-flex justify-content-center align-items-center" role="tablist" aria-label="Slides 縮圖"></div>
+      <div class="text-center my-5">
+        <a href="#FormTemplate" class="btn bg-orange text-white py-3 px-4">進一步申請試用 →</a>
+      </div>
+    </div>
+    <div id="report-download">
+      <h3 class="text-center text-green mb-4" style="font-size:clamp(24px,4vw,48px);">關稅風暴下 市場真實樣貌</h3>
+      <div class="text-center mb-3">
+        <div class="h4 d-inline-block mx-auto text-center px-4 border-bottom border-4 border-dark py-2">洞燭市場動態變因，站穩企業布局每一步</div>
+      </div>
+      <figure class="text-center mb-3">
+        <img src="https://picsum.photos/seed/2/800/420" alt="12" width="" height="" loading="lazy" decoding="async">
+      </figure>
+      <div class="row justify-content-center">
+        <div class="col-12 col-lg-6 text-center">
+          <p>據鼎新真實市場數據統計，<br>「5成企業獲利將受影響、4成出口成本上升、2成企業訂單被取消」<br>企業在面對關稅與地緣壓力下，市場與供應鏈優化已是企業轉型的重要策略。</p>
+        </div>
+      </div>
+      <div class="text-center my-5">
+        <a href="https://event.digiwin.com/tariff_twmarketing_download" class="btn bg-orange text-white py-3">完整報告書下載 →</a>
+      </div>
+    </div>
+    
+  </div>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/swiper@12.0.2/swiper-bundle.min.js"></script>
+<script src="https://www.digiwin.com/tw/js/solution/WB003954/tariff-calculating.js"></script>
 </body>
 </html>
