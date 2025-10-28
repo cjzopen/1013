@@ -1,4 +1,4 @@
-#tariff-chart{
+#bs5{
   --white:#fff;
   --green:#5A9443;
   --orange:#E38E17;
@@ -7,7 +7,7 @@
   color:#2A3320;
   font-family: "Noto Sans TC", sans-serif;
   background-color: #FEE867;
-  background-image: url('https://www.digiwin.com/tw/images/solution/wb003954/bg.webp');
+  background-image: url('https://www.digiwin.com/tw/images/solution/wb003954/tariff-bg.svg');
   background-size: 90vw auto;
   background-attachment: fixed;
   background-repeat: no-repeat;
@@ -42,7 +42,7 @@
 
   /* Card: prefer Bootstrap's .card; keep subtle default if needed */
   .card {
-    background: #fff;
+    background-color: #fff;
     border-radius: 0.5rem; /* matches Bootstrap rounding */
     padding: .75rem;
     box-shadow: 0 1px 0 rgba(0,0,0,0.04);
@@ -92,6 +92,41 @@
   }
   .bg-gray{
     background:var(--gray);
+  }
+  .btn.bg-green {
+    background-color: var(--green);
+    color: var(--white);
+    border:0;
+  }
+  .btn.bg-green:hover,
+  .btn.bg-green:active,
+  .btn.bg-green:focus {
+    background-color: color-mix(in srgb, var(--green) 80%, black 20%);
+    color: var(--white);
+  }
+
+  .btn.bg-orange {
+    background-color: var(--orange);
+    color: var(--white);
+    border:0;
+  }
+  .btn.bg-orange:hover,
+  .btn.bg-orange:active,
+  .btn.bg-orange:focus {
+    background-color: color-mix(in srgb, var(--orange) 80%, black 20%);
+    color: var(--white);
+  }
+
+  .btn.bg-gray{
+    background-color: var(--gray);
+    color: var(--white);
+    border:0;
+  }
+  .btn.bg-gray:hover,
+  .btn.bg-gray:active,
+  .btn.bg-gray:focus {
+    background-color: color-mix(in srgb, var(--gray) 80%, black 20%);
+    color: var(--white);
   }
 
   h1{
@@ -143,9 +178,14 @@
 
   /* List & items: prefer Bootstraps overflow utilities but keep custom sizes */
   .list {
-    max-height: 420px;
+    max-height: 400px;
     overflow: auto;
     margin-top: 0.5rem;
+  }
+  @media (min-width: 1200px) {
+    .list{
+      max-height: 492px;
+    }
   }
   .item {
     padding: 0.5rem;
@@ -197,26 +237,52 @@
     height: 95px;
     z-index: 2;
   }
-  #pointPopover{
+  #pointPopover, .popover{
+    z-index: 9999;
     width:90vw;
     max-width:580px;
     padding:1rem;
     border:0;
     border-radius:8px;
-    background:#fff;
+    background-color: #FEE867;
     overflow: visible;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    &::backdrop{
+      background-color: rgba(10, 10, 10, .5);
+    }
   }
-  #pointPopoverInsideToggle{
+  .popover{
+    max-width: 1200px;
+    max-height: 98dvh;
+  }
+  .popover .card{
+    max-height: calc(98dvh - 6rem);
+    overflow-y: auto;
+    /* -webkit-overflow-scrolling: touch; */
+    /* padding-right: 0.5rem; */
+  }
+  #pointPopoverInsideToggle, .popoverInsideToggle{
     width:24px;
     height:24px;
     border-radius:50%;
     background-color:#fff;
     color:var(--orange);
   }
+  
+  #exmaple-swiper{
+    max-width: 1000px;
+  }
+  @media (min-width: 1200px) {
+    #exmaple-swiper{
+      min-height: 580px;
+    }
+  }
   .swiper-pagination-thumb img{width:60px;height:40px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,0.9)}
     .swiper-pagination-thumb{display:inline-block;margin:0 6px;opacity:0.6}
     .swiper-pagination-bullet-active.swiper-pagination-thumb{opacity:1;transform:scale(1.05);background:none;}
-    .swiper-button-next, .swiper-button-prev{color:#fff}
+    .swiper-button-next, .swiper-button-prev{color:#2A3320}
   .swiper-pagination{
     position: relative;
   }
@@ -224,5 +290,22 @@
     width: auto;
     height: auto;
     background:none;
+  }
+  .breathing{
+    animation: breathingAnimation 3s ease-in-out infinite;
+  }
+}
+@keyframes breathingAnimation {
+  0% {
+    opacity: .7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: .7;
+    transform: scale(1);
   }
 }

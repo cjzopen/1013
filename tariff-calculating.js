@@ -2,13 +2,14 @@ const pointPopover = document.getElementById('pointPopover');
 const popoverBtn = document.querySelector('#pointPopoverToggle');
 
 // 從 localStorage 讀取或使用預設值
-const tariffRates = JSON.parse(localStorage.getItem('tariffRates')) || {
+const DEFAULT_TARIFF_RATES = {
   '柬埔寨': 19,
   '泰國': 19,
   '臺灣': 20,
   '越南': 20,
   '中國': 30
 };
+const tariffRates = JSON.parse(localStorage.getItem('tariffRates')) || {...DEFAULT_TARIFF_RATES};
 
 // 儲存關稅資料到 localStorage
 function saveTariffRates() {
@@ -52,6 +53,9 @@ function renderCountryUI() {
       // 樣式切換
       originInput.querySelectorAll('button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      // #originInput active，#newCountryName 和 #newCountryTariff 清空
+      newCountryName.value = '';
+      newCountryTariff.value = '';
     };
     originInput.appendChild(btn);
 
@@ -64,7 +68,18 @@ function renderCountryUI() {
   });
 }
 
+
 renderCountryUI();
+
+// 當 #newCountryName 或 #newCountryTariff 有 input 時，移除 #originInput 內所有按鈕的 .active，並將 selectedOrigin 設為 null
+newCountryName.addEventListener('input', () => {
+  originInput.querySelectorAll('button.active').forEach(btn => btn.classList.remove('active'));
+  selectedOrigin = null;
+});
+newCountryTariff.addEventListener('input', () => {
+  originInput.querySelectorAll('button.active').forEach(btn => btn.classList.remove('active'));
+  selectedOrigin = null;
+});
 
 
 // 預設隱藏象限統計與圖表區
@@ -103,18 +118,54 @@ const pulsePlugin = {
     if (!meta?.data?.length) return;
 
     const ctx = chart.ctx;
-    const t = Date.now() / 500; // 控制速度
-    const scale = 1 + 0.4 * Math.sin(t); // 放大倍率
+    // 動畫參數
+    const t = (Date.now() % 4000) / 4000; // 4s 週期，0~1
+    const shadowMax = 16; // 最大外擴 px
+    const shadowMin = 0; // 最小外擴 px
+    const alphaMax = 0.6;
+    const alphaMin = 0.1;
 
     meta.data.forEach((point) => {
       if (!point.options._baseRadius) point.options._baseRadius = point.options.radius || 6;
-      const r = point.options._baseRadius * scale;
+      const r = point.options._baseRadius;
       const { x, y } = point;
-      const color = point.options.backgroundColor;
+      // 取顏色，轉成 rgba
+      let color = point.options.backgroundColor;
+      let rgb = [255,165,0]; // 預設橘色
+      if (color.startsWith('hsl')) {
+        // hsl 轉 rgb
+        const m = color.match(/hsl\((\d+),\s*(\d+)%?,\s*(\d+)%?\)/);
+        if (m) {
+          const h = Number(m[1]), s = Number(m[2]), l = Number(m[3]);
+          // hsl to rgb
+          const a = s/100 * Math.min(l/100,1-l/100);
+          const f = n => {
+            const k = (n + h/30)%12;
+            const c = l/100 - a * Math.max(Math.min(k-3,9-k,1),-1);
+            return Math.round(255 * c);
+          };
+          rgb = [f(0),f(8),f(4)];
+        }
+      } else if (color.startsWith('rgb')) {
+        rgb = color.match(/\d+/g).map(Number).slice(0,3);
+      }
 
+      // box-shadow 動畫參數
+      const shadow = shadowMin + (shadowMax-shadowMin) * t;
+      const alpha = alphaMax - (alphaMax-alphaMin) * t;
+
+      // 畫外擴圓環（模擬 box-shadow）
       ctx.save();
       ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.arc(x, y, r+shadow, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+      ctx.fill();
+      ctx.restore();
+
+      // 畫本體圓
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI*2);
       ctx.fillStyle = color;
       ctx.fill();
       ctx.restore();
@@ -132,6 +183,48 @@ const pulsePlugin = {
   }
 };
 Chart.register(pulsePlugin);
+// Plugin: 象限文字標籤（繪在點層之下）
+const quadrantLabelPlugin = {
+  id: 'quadrant-labels',
+  beforeDatasetsDraw(chart, args, options) {
+    const ctx = chart.ctx;
+    const xScale = chart.scales.x;
+    const yScale = chart.scales.y;
+    const dataset0 = chart.data.datasets[0];
+    if (!dataset0 || !dataset0.data || dataset0.data.length === 0) return;
+
+    // 計算平均線位置（以 dataset 1 和 2 的 __line 資料為基準）
+    const avgX = chart.data.datasets[1]?.data?.[0]?.x ?? (xScale.min + xScale.max) / 2;
+    const avgY = chart.data.datasets[2]?.data?.[0]?.y ?? (yScale.min + yScale.max) / 2;
+
+    // 四個象限的文字位置：在每個象限的中心偏下方
+    const positions = [
+      { text: 'i：高毛利高銷售額', x: (avgX + xScale.max) / 2, y: (avgY + yScale.max) / 2 }, // Q1: 右上
+      { text: 'ii：高毛利低銷售額', x: (xScale.min + avgX) / 2, y: (avgY + yScale.max) / 2 }, // Q2: 左上
+      { text: 'iii：低毛利低銷售額', x: (xScale.min + avgX) / 2, y: (yScale.min + avgY) / 2 }, // Q3: 左下
+      { text: 'iv：低毛利高銷售額', x: (avgX + xScale.max) / 2, y: (yScale.min + avgY) / 2 }  // Q4: 右下
+    ];
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.font = '700 16px / 1.2 "Noto Snas TC", sans-serif';
+    ctx.fillStyle = 'rgba(255,10,10,.2)';
+    // ctx.strokeStyle = 'rgba(0,0,0,0)';
+    ctx.lineWidth = 3;
+
+    positions.forEach(pos => {
+      // 將資料座標轉為 canvas 座標
+      const canvasX = xScale.getPixelForValue(pos.x);
+      const canvasY = yScale.getPixelForValue(pos.y);
+      // ctx.strokeText(pos.text, canvasX, canvasY + 6);
+      ctx.fillText(pos.text, canvasX, canvasY + 6);
+    });
+
+    ctx.restore();
+  }
+};
+Chart.register(quadrantLabelPlugin);
 const chart = new Chart(ctx, {
   type: 'scatter',
   data: {
@@ -179,10 +272,10 @@ chartCanvas.addEventListener('click', function (evt) {
         const data = chart.data.datasets[point.datasetIndex].data[point.index];
         const item = items.find(it => it.id === data.id) || data;
         let quadrant = '';
-        if (item.amount >= avgAmount && item.marginAfter >= avgMargin) quadrant = `<p>哇！太棒了！<br>這產品_(物料編號)_為企業主力產品區段，具穩定訂單與良好毛利，是維持整體獲利的關鍵群組。</p><p>建議持續強化 製程穩定性與供應鏈韌性，確保能在關稅或原物料波動時維持競爭力。同時可評估是否能透過 模組化設計、料件共用化或延伸應用場域，進一步擴大市場規模與產能效益。</p><p>想知道轉移到哪些產地會有更穩地的收益、或是拆解供應鏈中成本分析，歡迎免費申請體驗。</p><div class="px-3 mt-2"><a href="#FormTemplate" style="font-size:20px" class="w-100 btn py-2 bg-orange text-white">立即申請免費AI關稅決策情境模擬 →</a></div>`;
-        else if (item.amount < avgAmount && item.marginAfter >= avgMargin) quadrant = `<p>您在第二象限的產品 ${item.part}，說明該產品利潤能力已經成熟，只是銷售規模還沒放大。</p><p>這正是未來的發展機會！<br>若能結合 跨境市場開發、專案式行銷推進，甚至利用 數據化工具精準鎖定需求，就能讓這些產品逐步晉升到第一象限，成為您/企業名重要的營收與利潤引擎。</p><p>針對產品 ${item.part}，建議從……</p><div class="px-3 mt-2"><a href="#FormTemplate" style="font-size:20px" class="w-100 btn py-2 bg-orange text-white">看更多產品分析，歡迎申請免費AI體驗 →</a></div>`;
-        else if (item.amount < avgAmount && item.marginAfter < avgMargin) quadrant = `<p>這產品_(物料編號)_暫時處於低量低利區段，可能是製程成本過高或市場需求減弱。建議盤點料件與生產模式，找出可優化的環節，避免資源被低效產品占用。</p><p>建議優先檢視製程成本、原物料替代性與訂單穩定度，評估是否能透過：</p><ul class="disc"><li>改善製造流程、提升稼動率或導入自動化，降低單位成本。</li><li>與關鍵客戶協商改變供應模式，提升訂單量。</li></ul><p>若該產品長期獲利性低，建議逐步縮減資源配置，將產線調整至毛利較佳品項。</p>`;
-        else quadrant = `<p>雖然目前您的產品 ${item.part} 集中於<strong>高銷售但低毛利</strong>的第四象限，但這也代表它們具有市場規模優勢！</p><p>只要進一步優化成本結構（如原料、供應鏈）或提升附加價值（如品牌溢價、產品升級），這些產品就能從薄利多銷，轉變為高毛利高銷售的第一象限明星產品。</p><p>針對產品_(物料編號)_，建議從……</p>`;
+        if (item.amount >= avgAmount && item.marginAfter >= avgMargin) quadrant = `<p>哇！太棒了！<br>這產品 ${item.part} 為企業主力產品區段，具穩定訂單與良好毛利，是維持整體獲利的關鍵群組。</p><p>建議持續強化 製程穩定性與供應鏈韌性，確保能在關稅或原物料波動時維持競爭力。同時可評估是否能透過 模組化設計、料件共用化或延伸應用場域，進一步擴大市場規模與產能效益。</p><p>想知道轉移到哪些產地會有更穩地的收益、或是拆解供應鏈中成本分析，歡迎免費申請體驗。</p><div class="px-3 mt-2"><a href="#FormTemplate" style="font-size:20px" class="w-100 btn py-2 bg-orange text-white">看更多產品分析，歡迎申請免費AI體驗 →</a></div>`;
+        else if (item.amount < avgAmount && item.marginAfter >= avgMargin) quadrant = `<p>您在第二象限的產品 ${item.part}，說明該產品利潤能力已經成熟，只是銷售規模還沒放大。</p><p>這正是未來的發展機會！<br>若能結合 跨境市場開發、專案式行銷推進，甚至利用 數據化工具精準鎖定需求，就能讓這些產品逐步晉升到第一象限，成為您重要的營收與利潤引擎。</p><p>針對產品 ${item.part}，建議從……</p><div class="px-3 mt-2"><a href="#FormTemplate" style="font-size:20px" class="w-100 btn py-2 bg-orange text-white">看更多產品分析，歡迎申請免費AI體驗 →</a></div>`;
+        else if (item.amount < avgAmount && item.marginAfter < avgMargin) quadrant = `<p>這產品 ${item.part} 暫時處於低量低利區段，可能是製程成本過高或市場需求減弱。建議盤點料件與生產模式，找出可優化的環節，避免資源被低效產品占用。</p><p>建議優先檢視製程成本、原物料替代性與訂單穩定度，評估是否能透過：</p><ul class="disc pl-1"><li>- 改善製造流程、提升稼動率或導入自動化，降低單位成本。</li><li>- 與關鍵客戶協商改變供應模式，提升訂單量。</li></ul><p>若該產品長期獲利性低，建議逐步縮減資源配置，將產線調整至毛利較佳品項。</p><a href="#FormTemplate" style="font-size:20px" class="w-100 btn py-2 bg-orange text-white">看更多產品分析，歡迎申請免費AI體驗 →</a></div>`;
+        else quadrant = `<p>雖然目前您的產品 ${item.part} 集中於<strong>高銷售但低毛利</strong>的第四象限，但這也代表它們具有市場規模優勢！</p><p>只要進一步優化成本結構（如原料、供應鏈）或提升附加價值（如品牌溢價、產品升級），這些產品就能從薄利多銷，轉變為高毛利高銷售的第一象限明星產品。</p><p>針對產品 ${item.part}，建議從……</p><a href="#FormTemplate" style="font-size:20px" class="w-100 btn py-2 bg-orange text-white">看更多產品分析，歡迎申請免費AI體驗 →</a></div>`;
         // 組內容（只更新內容區）
         const content = `
           <div class="card p-3 mb-3" style="background-color:#FFFEED;border:1px solid #FEE867">
@@ -196,9 +289,19 @@ chartCanvas.addEventListener('click', function (evt) {
         document.getElementById('pointPopoverContent').innerHTML = content;
         // 只觸發 popover 按鈕
         popoverBtn?.click();
+
+        // 為 #pointPopoverContent 內的 <a> 綁定點擊事件，點擊時觸發 #pointPopoverToggle 點擊以關閉 popover
+        const popoverContent = document.getElementById('pointPopoverContent');
+        if (popoverContent) {
+          popoverContent.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => {
+              popoverBtn?.click();
+            });
+          });
+        }
       }
   }
-});    
+});
 
     // 新增一筆資料（按鈕）
     btnAdd.onclick = () => {
@@ -246,6 +349,15 @@ chartCanvas.addEventListener('click', function (evt) {
       };
 
       items.unshift(item);
+
+      // 新增成功後，移除 example 資料（id 為 seedExample 產生的）
+      // seedExample 產生的 id 為 Date.now() + Math.floor(Math.random()*1000)，可用一個 flag 標記
+      if (window._seedExampleIds === undefined) window._seedExampleIds = [];
+      // 若 item.id 不是 example 資料，則清除 example
+      if (window._seedExampleIds.length) {
+        items = items.filter(it => !window._seedExampleIds.includes(it.id));
+      }
+
       updateAll();
       // 重置表單（保留產地與關稅可視需要）
       partInput.value = '';
@@ -258,6 +370,12 @@ chartCanvas.addEventListener('click', function (evt) {
     btnClear.onclick = () => {
       if (!confirm('確定要清空所有資料？')) return;
       items = [];
+      // 刪除 localStorage 關稅資料
+      localStorage.removeItem('tariffRates');
+      // 重設 tariffRates 為預設值
+      Object.keys(tariffRates).forEach(k => delete tariffRates[k]);
+      Object.assign(tariffRates, DEFAULT_TARIFF_RATES);
+      renderCountryUI();
       updateAll();
     };
 
@@ -265,7 +383,6 @@ chartCanvas.addEventListener('click', function (evt) {
     function updateAll() {
       renderList();
       updateChart();
-      updateCounts();
     }
 
     function renderList() {
@@ -284,7 +401,7 @@ chartCanvas.addEventListener('click', function (evt) {
               <div class="meta">成本：${it.cost}，售價：${it.price}，銷售額：${it.amount}</div>
               <div class="meta">關稅：${it.tariff}% → 到岸成本：${it.costWithTariff}，原毛利：${it.marginOriginal}%，關稅後：${it.marginAfter}%</div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="d-flex flex-column flex-shrink-0" style="gap:4px">
               <button data-id="${it.id}" class="btnDel btn btn-outline-warning">刪除</button>
             </div>
           </div>
@@ -301,28 +418,27 @@ chartCanvas.addEventListener('click', function (evt) {
         };
       });
     }
+    // function updateCounts() {
+      // const cnt = { Q1:0, Q2:0, Q3:0, Q4:0 };
+      // if (!items.length) {
+      //   ['q1','q2','q3','q4'].forEach(id=>document.getElementById(id).textContent = '0');
+      //   return;
+      // }
+      // const avgAmount = items.reduce((s,i)=>s+i.amount,0)/items.length;
+      // const avgMargin = items.reduce((s,i)=>s+Number(i.marginAfter),0)/items.length;
 
-    function updateCounts() {
-      const cnt = { Q1:0, Q2:0, Q3:0, Q4:0 };
-      if (!items.length) {
-        ['q1','q2','q3','q4'].forEach(id=>document.getElementById(id).textContent = '0');
-        return;
-      }
-      const avgAmount = items.reduce((s,i)=>s+i.amount,0)/items.length;
-      const avgMargin = items.reduce((s,i)=>s+Number(i.marginAfter),0)/items.length;
+      // items.forEach(it => {
+      //   if (it.amount >= avgAmount && it.marginAfter >= avgMargin) cnt.Q1++;
+      //   else if (it.amount < avgAmount && it.marginAfter >= avgMargin) cnt.Q2++;
+      //   else if (it.amount < avgAmount && it.marginAfter < avgMargin) cnt.Q3++;
+      //   else cnt.Q4++;
+      // });
 
-      items.forEach(it => {
-        if (it.amount >= avgAmount && it.marginAfter >= avgMargin) cnt.Q1++;
-        else if (it.amount < avgAmount && it.marginAfter >= avgMargin) cnt.Q2++;
-        else if (it.amount < avgAmount && it.marginAfter < avgMargin) cnt.Q3++;
-        else cnt.Q4++;
-      });
-
-      document.getElementById('q1').textContent = String(cnt.Q1);
-      document.getElementById('q2').textContent = String(cnt.Q2);
-      document.getElementById('q3').textContent = String(cnt.Q3);
-      document.getElementById('q4').textContent = String(cnt.Q4);
-    }
+      // document.getElementById('q1').textContent = String(cnt.Q1);
+      // document.getElementById('q2').textContent = String(cnt.Q2);
+      // document.getElementById('q3').textContent = String(cnt.Q3);
+      // document.getElementById('q4').textContent = String(cnt.Q4);
+    // }
 
     function updateChart() {
       // 若無資料，清空圖表
@@ -412,13 +528,16 @@ chartCanvas.addEventListener('click', function (evt) {
         { part:'F016360', origin:'越南', cost:68, price:75, amount: 420 },
         { part:'F016361', origin:'中國', cost:68, price:75, amount: 210 }
       ];
+      window._seedExampleIds = [];
       example.forEach(e => {
         const tariff = tariffRates[e.origin] ?? 0;
         const costWithTariff = e.cost * (1 + tariff / 100);
         const mOrig = ((e.price - e.cost) / e.price) * 100;
         const mAfter = ((e.price - costWithTariff) / e.price) * 100;
+        const id = Date.now() + Math.floor(Math.random()*1000);
+        window._seedExampleIds.push(id);
         items.push({
-          id: Date.now() + Math.floor(Math.random()*1000),
+          id,
           part: e.part, origin: e.origin, cost: e.cost, price: e.price, amount: e.amount,
           tariff, costWithTariff: Number(costWithTariff.toFixed(4)),
           marginOriginal: Number(mOrig.toFixed(2)),
@@ -436,6 +555,11 @@ chartCanvas.addEventListener('click', function (evt) {
       if (typeof Swiper === 'undefined') return;
       const swiper = new Swiper('#exmaple-swiper', {
         loop: false,
+        centeredSlides: true,
+        autoplay: {
+          delay: 4000,
+          disableOnInteraction: false,
+        },
         navigation: {
           nextEl: '.swiper-button-next',
           prevEl: '.swiper-button-prev'
@@ -456,48 +580,50 @@ chartCanvas.addEventListener('click', function (evt) {
     if (window.Swiper) initSwiper();
     else window.addEventListener('load', initSwiper);
 
-    // 切換 ai 與 report 顯示區塊
     const aiBtn = document.getElementById('ai-example-button');
-    const rptBtn = document.getElementById('report-download-button');
-    const aiSection = document.getElementById('ai-example');
-    const rptSection = document.getElementById('report-download');
-    // 初始狀態：顯示 ai，隱藏 report
-    if (aiSection && rptSection) {
-      aiSection.style.display = '';
-      rptSection.style.display = 'none';
-      aiBtn.setAttribute('aria-pressed', 'true');
-      aiBtn.setAttribute('aria-controls', 'ai-example');
-      aiBtn.setAttribute('aria-expanded', 'true');
-      aiSection.setAttribute('aria-hidden', 'false');
-
-      rptBtn.setAttribute('aria-pressed', 'false');
-      rptBtn.setAttribute('aria-controls', 'report-download');
-      rptBtn.setAttribute('aria-expanded', 'false');
-      rptSection.setAttribute('aria-hidden', 'true');
+    const aiExampleCta = document.getElementById('ai-example-cta');
+    if (aiExampleCta) {
+      aiExampleCta.addEventListener('click', () => {
+        aiBtn?.click();
+      });
     }
 
-    aiBtn?.addEventListener('click', () => {
-      if (!aiSection || !rptSection) return;
-      aiSection.style.display = '';
-      rptSection.style.display = 'none';
-      aiBtn.setAttribute('aria-pressed', 'true');
-      aiBtn.setAttribute('aria-expanded', 'true');
-      aiSection.setAttribute('aria-hidden', 'false');
+    // 切換 ai 與 report 顯示區塊
+    // const aiBtn = document.getElementById('ai-example-button');
+    // const rptBtn = document.getElementById('report-download-button');
+    // const aiSection = document.getElementById('ai-example');
+    // const rptSection = document.getElementById('report-download');
+    // 初始隱藏 ai 與 report
+    // if (aiSection && rptSection) {
+      // aiSection.style.display = 'none';
+      // rptSection.style.display = 'none';
+    //   aiBtn.setAttribute('aria-pressed', 'true');
+    //   aiBtn.setAttribute('aria-controls', 'ai-example');
+    //   aiBtn.setAttribute('aria-expanded', 'true');
 
-      rptBtn.setAttribute('aria-pressed', 'false');
-      rptBtn.setAttribute('aria-expanded', 'false');
-      rptSection.setAttribute('aria-hidden', 'true');
-    });
+    //   rptBtn.setAttribute('aria-pressed', 'false');
+    //   rptBtn.setAttribute('aria-controls', 'report-download');
+    //   rptBtn.setAttribute('aria-expanded', 'false');
+    // }
 
-    rptBtn?.addEventListener('click', () => {
-      if (!aiSection || !rptSection) return;
-      aiSection.style.display = 'none';
-      rptSection.style.display = '';
-      aiBtn.setAttribute('aria-pressed', 'false');
-      aiBtn.setAttribute('aria-expanded', 'false');
-      aiSection.setAttribute('aria-hidden', 'true');
+    // aiBtn?.addEventListener('click', () => {
+    //   if (!aiSection || !rptSection) return;
+    //   // aiSection.style.display = '';
+    //   // rptSection.style.display = 'none';
+    //   aiBtn.setAttribute('aria-pressed', 'true');
+    //   aiBtn.setAttribute('aria-expanded', 'true');
 
-      rptBtn.setAttribute('aria-pressed', 'true');
-      rptBtn.setAttribute('aria-expanded', 'true');
-      rptSection.setAttribute('aria-hidden', 'false');
-    });
+    //   rptBtn.setAttribute('aria-pressed', 'false');
+    //   rptBtn.setAttribute('aria-expanded', 'false');
+    // });
+
+    // rptBtn?.addEventListener('click', () => {
+    //   if (!aiSection || !rptSection) return;
+    //   // aiSection.style.display = 'none';
+    //   // rptSection.style.display = '';
+    //   aiBtn.setAttribute('aria-pressed', 'false');
+    //   aiBtn.setAttribute('aria-expanded', 'false');
+
+    //   rptBtn.setAttribute('aria-pressed', 'true');
+    //   rptBtn.setAttribute('aria-expanded', 'true');
+    // });
